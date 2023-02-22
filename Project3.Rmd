@@ -1,0 +1,398 @@
+---
+title: "Project_3"
+author: "Joseph Elue"
+date: "2023-02-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploratory Question
+
+```{r 1, echo = TRUE}
+library(kernlab)
+data("spam")
+str(spam)
+```
+
+Explore Data
+
+```{r 2, echo = TRUE}
+# Summary of data
+summary(spam)
+
+# Check for NA's
+data_set <- spam
+any(is.na(data_set))
+```
+
+
+```{r 3, include=TRUE}
+nonspam <- apply(data_set[data_set[ ,"type"]=="nonspam", -58], 2, mean)
+spam <- apply(data_set[data_set[ ,"type"]=="spam", -58], 2, mean)
+data_set_2 <- cbind(nonspam, spam)
+data_set_2
+```
+
+Now the difference:
+
+```{r 4, include=TRUE}
+# Check type of Data
+str(data_set_2)
+
+# Convert to Data.frame
+data_set_2 <- as.data.frame(data_set_2)
+
+# Find the Difference 
+diff <- abs(data_set_2[,1] - data_set_2[,2])
+
+# Add diff to data_set_2
+data_set_2 <- cbind(data_set_2, diff)
+data_set_2
+
+# Order by the diff
+data_set_2 <- order(data_set_2[ ,3], decreasing = TRUE)
+data_set_2
+```
+
+
+```{r}
+barplot(data_set_2, col = "light blue", horiz = TRUE,
+              cex.names = 0.7)
+```
+## LPM Question
+
+```{r}
+# Question 2 
+# Change dataset$type tp a numeric dataset for analysis
+data_set$type <- as.numeric(data_set$type)
+
+# Store as binary "1's and 0's"
+data_set$type[data_set$type==2] <- 0
+data_set$type[data_set$type==1] <- 1
+
+# Set seed 
+set.seed(2)
+
+# Create in and out of sample data
+ind <- sample(nrow(data_set), nrow(data_set)*0.8)
+train_1 <- data_set[ind,]
+test_1 <- data_set[-ind,]
+```
+
+```{r}
+# Create model
+model_1 <- lm(type ~., data=train_1)
+
+# Create Prediction set 
+phat <- predict(model_1, newdata = test_1)
+```
+
+
+```{r}
+# Create Grid
+grid = seq(0.2, 0.85, 0.01)
+
+# ACC Container 
+ACC <- c()
+
+# Loop to test for the optimal grid
+for (i in 1:length(grid)) {
+  # yhat using conditional grid, using the grid search for every value of     i 
+  yhat <- phat > grid[i]
+  # Confusion table 
+  conf_table <- table(test_1$type, yhat)
+  # Accuracy, this would have a value for every value of i
+  ACC[i] <- (conf_table[1,1] + conf_table[2,2])/sum(conf_table)
+}
+
+# What is the maximum ACC
+max(ACC)
+
+# Which grid gives the maximum ACC
+grid[ACC == max(ACC)]
+```
+```{r}
+# Code to run the above analysis 100 times 
+
+# Create a new grid 
+grid_2 <- seq(0.2, 0.85, 0.01)
+
+# Create containers for analysis for each of the 100 times.
+ACC_2 <- c()
+grid_3 <- c()
+
+# First Loop that would run 100 times 
+for (j in 1:100){
+  
+# Data Split named ind_2 so as to not alter the first ind
+  ind_2 <- sample(nrow(data_set), nrow(data_set)*0.8)
+  train_2 <- data_set[ind_2,]
+  test_2 <- data_set[-ind_2,]
+  
+# Model 
+  model_2 <- lm(type~., data=train_2)
+  phat_2 <- predict(model_2, newdata = test_2)
+
+# Container for ACC for each of the grids
+  ACC_3 <- c()
+  
+  for (i in 1:length(grid_2)) {
+  yhat_2 <- phat_2 > grid_2[i]
+  conf_table_2 <- table(test_2$type, yhat_2)
+  ACC_3[i] <- (conf_table_2[1,1] + conf_table_2[2,2])/sum(conf_table_2)
+  }
+# Container for each of the max ACC_3 for the grid span for each of the 100 times
+  ACC_2[j] <- max(ACC_3)
+
+# Grid container for which grid equals the max ACC for each of the 100 times
+  grid_3[j] <- grid[ACC_3 == max(ACC_3)][1]
+}
+
+# Which if the max ACC out of the 100 times 
+which.max(ACC_2)
+max(ACC_2)
+
+# What is the grid for the max ACC after running 100 times 
+grid_3[ACC_3 == max(ACC_3)]
+
+# Calculate mean ACC
+mean_acc_2 <- mean(ACC_2)
+
+# Calculate standard error
+standard_error <- sqrt(var(ACC_2) / length(ACC_2))
+
+# Plot the 100 ACC's and the abline as the mean of those ACC's
+plot(ACC_2, col = "dark blue", main = "ACC Plot")
+abline(mean_acc_2,b = 0, col = "red", lwd = 1)
+
+```
+## KNN Question
+
+```{r}
+# Load the data
+
+rm(list = ls())
+library(kernlab)
+data("spam")
+df <- spam
+
+# Code used to scale the data
+
+dfs <- scale(df[, -58])
+dfs <- data.frame(dfs, type = df$type)
+```
+
+```{r}
+# KNN Package 
+library(caret)
+
+# Set Seed
+set.seed(2)
+
+# Data Split
+ind_3 <- sample(nrow(dfs), nrow(dfs)*0.8)
+train_dfs <- dfs[ind_3,]
+test_dfs <- dfs[-ind_3,]
+
+# Grid Creation for KNN
+
+k <- seq(1, 30, 1)
+th <- seq(0.2, 0.85, 0.01)
+
+# Cross Validation Code 
+h = 10
+
+# Create train set
+n <- nrow(train_dfs)
+
+# Test Set
+ntest <- floor(n/h)
+
+# Shuffle observations in our train_dfs
+ind_4 <- sample(n,n, replace = FALSE)
+
+# Shuffled train_dfs
+train_dfs <- train_dfs[ind_4, ]
+
+# Create containers for the code
+# Accuracy Containers
+
+ACC_4 <- matrix(0, length(k), length(th))
+OPT <- matrix(0, nrow = h, ncol = 2)
+
+
+# 10-fold Cross Validation
+
+for (i in 1:h) {
+  # Code for Moving Windows 
+  if(i < h) {
+    ind_test <- ind_4[((i-1)*ntest+1):(i*ntest)]
+  }else{
+    ind_test <- ind_4[((i-1)*ntest+1):n]
+  }
+  # Code for Data Split
+  df_train <- train_dfs[-ind_test, ]
+  df_test <- train_dfs[ind_test, ]
+  
+  # Container for the best value of K
+  ACCk <- c()
+  
+  # Loop to find the best value for K
+  for (s in 1:length(k)) {
+    
+    # Model for KNN
+    model_4 <- knn3(type ~., data = df_train, k = k[s])
+    phat_4 <- predict(model_4, newdata = df_test, type = "prob")
+    
+    # Container for the optimal threshold
+    
+    ACCth <- c()
+    for (j in 1:length(th)) {
+      cat("loops: ", i, s, j, "\r")
+      yhat_4 <- phat_4[, 2] > th[j]
+      
+      # Confusion table for KNN prediction
+      conf_table_4 <- table(df_test$type, yhat_4)
+      conf_table_4
+      
+      # ACC's for the optimal thresholds 
+      ACCth[j] <- sum(diag(conf_table_4)) / sum(conf_table_4)
+    }
+    # ACC's for each of the max thresholds 
+    ACCk[s] <- max(ACCth)
+  }
+  # Optimal thresholds and max ACC
+  OPT[i,1] <- which.max(ACCk)
+  
+  # Max ACC's
+  OPT[i,2] <- max(ACCk)
+}
+# Show table
+OPT
+```
+```{r}
+# KNN Package 
+library(caret)
+
+# Set Seed
+set.seed(2)
+
+ACC_5 <- c()
+grid_5 <- c()
+
+# First Loop that would run 100 times 
+for (l in 1:100){
+  
+  # Data Split
+  ind_3 <- sample(nrow(dfs), nrow(dfs)*0.8)
+  train_dfs <- dfs[ind_3,]
+  test_dfs <- dfs[-ind_3,]
+  
+  # Grid Creation for KNN
+  
+  k <- seq(1, 30, 1)
+  th <- seq(0.2, 0.85, 0.01)
+  
+  # Cross Validation Code 
+  h = 10
+  
+  # Create train set
+  n <- nrow(train_dfs)
+  
+  # Test Set
+  ntest <- floor(n/h)
+  
+  # Shuffle observations in our train_dfs
+  ind_4 <- sample(n,n, replace = FALSE)
+  
+  # Shuffled train_dfs
+  train_dfs <- train_dfs[ind_4, ]
+  
+  # Create containers for the code
+  # Accuracy Containers
+  
+  ACC_4 <- matrix(0, length(k), length(th))
+  OPT <- matrix(0, nrow = h, ncol = 2)
+  
+  
+  # 10-fold Cross Validation
+  
+  for (i in 1:h) {
+    # Code for Moving Windows 
+    if(i < h) {
+      ind_test <- ind_4[((i-1)*ntest+1):(i*ntest)]
+    }else{
+      ind_test <- ind_4[((i-1)*ntest+1):n]
+    }
+    # Code for Data Split
+    df_train <- train_dfs[-ind_test, ]
+    df_test <- train_dfs[ind_test, ]
+    
+    # Container for the best value of K
+    ACCk <- c()
+    
+    # Loop to find the best value for K
+    for (s in 1:length(k)) {
+      
+      # Model for KNN
+      model_4 <- knn3(type ~., data = df_train, k = k[s])
+      phat_4 <- predict(model_4, newdata = df_test, type = "prob")
+      
+      # Container for the optimal threshold
+      
+      ACCth <- c()
+      for (j in 1:length(th)) {
+        cat("loops: ", i, s, j, "\r")
+        yhat_4 <- phat_4[, 2] > th[j]
+        
+        # Confusion table for KNN prediction
+        conf_table_4 <- table(df_test$type, yhat_4)
+        conf_table_4
+        
+        # ACC's for the optimal thresholds 
+        ACCth[j] <- sum(diag(conf_table_4)) / sum(conf_table_4)
+      }
+      # ACC's for each of the max thresholds 
+      ACCk[s] <- max(ACCth)
+    }
+    # Optimal thresholds and max ACC
+    OPT[i,1] <- which.max(ACCk)
+    
+    # Max ACC's
+    OPT[i,2] <- max(ACCk)
+  }
+  # Show table
+  OPT
+  
+  # Container for each of the max ACC_3 for the grid span for each of the 100 times
+  ACC_5[l] <- max(OPT)
+  
+  # Grid container for which grid equals the max ACC for each of the 100 times
+  grid_5[l] <- ACCk[OPT == max(OPT)][1]
+}
+
+# Which if the max ACC out of the 100 times 
+which.max(ACC_5)
+
+# What is the grid for the max ACC after running 100 times 
+grid_5[ACC_5 == max(ACC_5)]
+
+# Calculate mean ACC
+mean_acc_5 <- mean(ACC_5)
+mean_acc_5
+
+# Calculate standard error
+standard_error <- sqrt(var(ACC_5) / length(ACC_5))
+standard_error
+
+# Plot the 100 ACC's and the abline as the mean of those ACC's
+plot(ACC_5, col = "dark blue", main = "ACC Plot")
+abline(mean_acc_5,b = 0, col = "red", lwd = 1)
+```
+
+
+
+
