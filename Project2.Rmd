@@ -1,0 +1,283 @@
+---
+title: "Project_2"
+author: "Joseph Elue"
+date: "2023-01-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+SECTION 1 
+
+Question 1
+
+Set your working directory for this assignment.
+
+```{r}
+#setwd("C:")
+```
+
+Question 2
+
+Download the data
+
+```{r}
+autompg = read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",quote = "\"", comment.char = "", stringsAsFactors = FALSE)
+colnames(autompg)
+
+str(autompg)
+
+df <- autompg
+```
+
+Question 3
+
+Go to the website and change the column names with the correct ones
+
+```{r}
+colnames(df)
+
+names(df)[names(df) == "V1"] <- "mpg"
+names(df)[names(df) == "V2"] <- "cylinders"
+names(df)[names(df) == "V3"] <- "displacement"
+names(df)[names(df) == "V4"] <- "horsepower"
+names(df)[names(df) == "V5"] <- "weight"
+names(df)[names(df) == "V6"] <- "acceleration"
+names(df)[names(df) == "V7"] <- "model_year"
+names(df)[names(df) == "V8"] <- "origin"
+names(df)[names(df) == "V9"] <- "car_name"
+```
+
+Question 4
+
+Check the data and correct the class (Factor, Int, Num, etc.) of each column to an appropriate one, if
+necessary
+
+```{r}
+# Convert HP to numeric because the loop converts it to factor hence it doesn't count the Na's as Na's
+df$horsepower <- as.numeric(df$horsepower)
+
+# I converted these to factors because they signify difference types of cars and not necessarily a numeric increase. 
+df$cylinders <- as.factor(df$cylinders)
+df$origin <- as.factor(df$origin)
+
+# Covert the remaining variables appropriately
+for (i in 1:ncol(df)) {
+  if(is.character(df[,i])) df[,i] <- as.factor(df[,i])
+}
+
+# Proof of conversion
+str(df)
+```
+
+Question 5
+
+How many missing values do we have in the data?
+
+```{r}
+# Is there any NA in the data
+anyNA(df$horsepower)
+
+# Find the sum of these NA's 
+sum(is.na(df))
+
+```
+Question 6 
+
+Identify the number of NA’s in each column.
+
+```{r}
+# Given Code
+r <- sapply(df, function(x) length(which(is.na(x))))
+r
+
+# Alternative Code
+colSums(is.na(df))
+
+# This would present the results in a list format
+r <- lapply(df, function(x) length(which(is.na(x))))
+r
+```
+Question 7 
+
+What’s the mean of hp in our data? If you are not able to get a number, why? How would you solve
+this problem? Hint: na.rm in mean()
+
+```{r}
+mean_hp <- mean(df$horsepower, na.rm = TRUE)
+mean_hp
+```
+Question 8 
+
+What are the row and column index numbers for those NA’s in your data. Call that matrix ind.
+
+```{r}
+ind <- which(is.na(df), arr.ind = TRUE)
+ind
+
+```
+Question 9
+
+Now, we will handle NA’s with several different ways
+
+```{r}
+# Assign data to a different name 
+df2 <- df
+
+# Replace these Na's with the conditional mean of hp of the corresponding origin
+# Proof of NA before replacement
+anyNA(df2$horsepower)
+
+# Replacement
+df2$horsepower[is.na(df2$horsepower)] <- with(df2, ave(df2$horsepower, df2$origin, FUN = function(x) mean(x, na.rm = TRUE)))
+
+# Proof of removed NA after replacement
+anyNA(df2$horsepower)
+```
+
+Question 9b 
+
+Remove NA’s and show the dimension of new data.
+
+```{r}
+# Dimension of data before removing Na's
+dim(df)
+
+
+# Remove Na's
+df <- df[complete.cases(df), ] 
+
+# Dimension of data after removing Na's 
+dim(df)
+```
+
+
+SECTION 2 
+
+Question 1 
+
+Plot mpg vs. hp, mpg vs. disp, mpg vs. acc. Put these three graphs next to each other. Use titles and
+different colors in each. Change the axis labels as well. Hint look at par() and mfcol(). Make sure
+that labels are not too large, otherwise adjust them
+
+```{r}
+par(mfcol = c(1, 3))
+plot(x = df$mpg, y = df$horsepower,cex = .5, col = "dark red", xlab = "MPG", ylab = "Horsepower", main = "MPG vs Horsepower")
+plot(x = df$mpg, y = df$displacement,cex = .5, col = "red", xlab = "MPG", ylab = "Displacement", main = "MPG vs Displacement")
+plot(x = df$mpg, y = df$acceleration,cex = .5, col = "dark blue", xlab = "MPG", ylab = "Acceleration", main = "MPG vs Acceleration")
+
+```
+
+Question 2 
+
+Now, please get 6 plots (3 variables vs any other 3) in one plot.
+
+```{r}
+# Plotting three variables 
+pairs(df[c(1, 3, 6)])
+
+# Plotting six variables
+pairs(cbind(df$mpg, df$displacement, df$horsepower, df$weight, df$acceleration, df$model_year))
+
+```
+
+Question 3
+
+Try correlation plot with corrplot() and cor( ,use ="complete.obs"). You need the package corrplot.
+
+```{r}
+library(corrplot)
+library(tidyverse)
+df %>% 
+  select_if(is.numeric) %>% 
+  cor(., use="complete.obs") %>% 
+  corrplot::corrplot(., method="number") 
+
+```
+
+
+SECTION 3
+
+Question 1
+
+Use lm() to model 𝑚𝑝𝑔 = 𝑓(𝑥). Assign your estimations to model1. Calculate Training RMSPE. Remove NA before doing anything (use complete.cases()).
+```{r}
+# Remove Na's
+df <- df[complete.cases(df), ]
+
+# Data Split
+ind <- sample(nrow(df), nrow(df)*0.7)
+train <- df[ind,]
+test <- df[-ind,]
+
+# Model
+model1 <- lm(train$mpg ~ ., data = train)
+
+# Calculating RMPSE Train
+phat <- predict(model1, train)
+RMPSE_train <- sqrt(mean((train$mpg - phat)^2))
+RMPSE_train
+```
+SECTION 4
+
+Question 1
+
+We now need to see test RMSPE. Split our sample into two random parts: train which has 70% of
+the data and test which has the 30% of the data.
+
+```{r}
+# Remove NA's 
+df <- df[complete.cases(df), ]
+
+# Data Split
+ind <- sample(nrow(df), nrow(df)*0.7)
+train <- df[ind,]
+test <- df[-ind,]
+
+# Model: Car name was not included because it is a factor variable with a lot of levels hence it gives a error message when trying to find yhat.
+model1 <- lm(train$mpg ~ cylinders + displacement + horsepower + weight + acceleration + model_year + origin, data = train)
+yhat <- predict(model1, test)
+yhat
+```
+
+Section 4
+
+Question 2
+
+Calculate the test RMSPE:
+
+```{r}
+RMPSE <- sqrt(mean((test$mpg - yhat)^2))
+RMPSE
+```
+
+Section 4
+
+Question 3
+
+Run a loop that calculates the test RMSPE 1000 times and plot it
+
+```{r}
+# Loop 
+RMPSE <- c()
+df <- df[complete.cases(df), ]
+for (i in 1:1000) {
+  ind <- sample(nrow(df), nrow(df)*0.7)
+  train <- df[ind,]
+  test <- df[-ind,]
+  model1 <- lm(train$mpg ~ displacement + horsepower + weight + acceleration, data = train)
+  yhat <- predict(model1, test)
+  RMPSE[i] <- sqrt(mean((test$mpg - yhat)^2))
+}
+
+plot(RMPSE, col = "dark blue", main = "RMPSE PLOT")
+abline(a=mean(RMPSE),b = 0, col = "red", lwd = 1)
+
+```
+
+
+
+
