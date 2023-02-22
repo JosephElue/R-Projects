@@ -1,0 +1,521 @@
+---
+title: "Project_1"
+author: "Joseph Elue"
+date: "2023-01-16"
+output: html_document
+---
+
+Section 1 "IO"
+
+Question 1
+```{r}
+# Suppose we have:
+df <- data.frame("y" = rnorm(10, 0, 1), "x" = runif(10, 1, 4))
+df
+
+# Save files using write.csv() and write.table()
+write.csv(df, file = "df.csv")
+write.table(df, file = "df2.csv") 
+
+# Read Files using read.csv() and read.table()
+read.csv("df.csv", row.names = 1)
+read.table("df2.csv",row.names = 1)
+```
+Section 2 "VECTORS"
+
+Question 1 
+
+Create each of the following vectors, assign them a “container” and print:
+[1] 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1
+[1] 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 19 18 17 16 15
+[26] 14 13 12 11 10 9 8 7 6 5 4 3 2 1
+```{r}
+a <- c(20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+b <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 19, 18, 17, 16, 15)
+d <- c(14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+
+print(a)
+print(b)
+print(d)
+
+
+
+```
+Question 2
+
+Create the following vector where there are 11 occurrences of 4, 10 occurrences of 6, and 10 occurrences
+of 3:
+[1] 4 6 3 4 6 3 4 6 3 4 6 3 4 6 3 4 6 3 4 6 3 4 6 3 4 6 3 4 6 3 4
+```{r}
+a <- c(rep(c(4,6,3),10),4) 
+a
+```
+Question 3
+
+Create a vector of the values of.......
+```{r}
+a <- c(2,((2^2)/2),((2^3)/3),((2^25)/25))
+a
+b <- round(a)
+b
+```
+Question 4 
+
+Use paste() to create the following character vectors of length 30: (“label 1”, “label 2”, . . . .., “label
+30”). Note that there is a single space between label and the number following.
+```{r}
+values <- c("label 1", "label 2", "label 30")
+second_values <- rep(values, 30)
+third_values <- paste(second_values, sep= " ")
+third_values
+```
+Question 5
+
+Execute the following lines which create two vectors of random integers which are chosen with replacement
+from the integers 0, 1,. . . , 999. Both vectors have length 250.
+set.seed(50)
+xVec <- sample(0:999, 250, replace = TRUE)
+yVec <- sample(0:999, 250, replace = TRUE)
+
+Code for 5a
+
+```{r}
+set.seed(50)
+xVec <- sample(0:999, 250, replace = TRUE)
+yVec <- sample(0:999, 250, replace = TRUE)
+
+# The index [-1] removes the first y1 in the sequence; thus we can have y2 which would be subtracted from x1
+# This goes all the way to yn whihc is the last number 250, while [-length(xVec)] is used because the equation is xn-1
+# Which simply means that x(total number of obersations - the last observation) this helps the figures to be balaced considering we already removed # the first value of y
+
+yVec[-1] - xVec[-length(xVec)]
+
+```
+
+Code for 5b 
+
+```{r}
+set.seed(50)
+xVec <- sample(0:999, 250, replace = TRUE)
+yVec <- sample(0:999, 250, replace = TRUE)
+
+# Here indexes were used to pick out the specific points that follow the sin and cosine functions
+
+b <- c(sin(yVec[-length(yVec)]) / cos(xVec[-1]))
+b
+```
+Code for 5c
+
+```{r}
+set.seed(50)
+xVec <- sample(0:999, 250, replace = TRUE)
+yVec <- sample(0:999, 250, replace = TRUE)
+
+d <- c(xVec[1]+2*xVec[2]-xVec[3], 2*xVec[3]-xVec[4],xVec[2-250]+2*xVec[-250]-xVec[250])
+d
+
+```
+Question 6 
+
+This question uses the vectors xVec and yVec created in the previous question and the functions sort,
+order, mean, sqrt, sum and abs.
+
+Code for 6a 
+
+```{r}
+set.seed(50)
+xVec <- sample(0:999, 250, replace = TRUE)
+yVec <- sample(0:999, 250, replace = TRUE)
+
+a <- sqrt(abs(xVec-mean(xVec)))
+a
+```
+
+Code for 6b 
+
+```{r}
+newvector <- yVec[which(yVec > 200)]
+a <- length(newvector)
+a
+
+```
+Code for 6c
+
+```{r}
+length(xVec[xVec %% 2 == 0])
+
+```
+
+Code for 6d
+
+```{r}
+xVec[order(yVec, decreasing = FALSE)]
+```
+
+Code for 6e 
+
+```{r}
+newvector <- c(xVec[which(xVec < 300)],xVec[which(xVec > 600)])
+newvector
+```
+ 
+Section 3 "MATRIXES"
+
+Question 1
+Create a 6 × 10 matrix of random integers chosen from 1, 2,. . . , 10 by executing the following two lines
+of code:
+set.seed(75)
+A <- matrix(sample(10, size = 60, replace = TRUE), nrow = 6)
+
+Code for 1a
+
+```{r}
+set.seed(75)
+A <- matrix(sample(10, size = 60, replace = TRUE), nrow = 6)
+A
+
+# Using the colSums function
+colSums(A)
+rowSums(A)
+
+# Alternative method using the apply function
+col.sums <- apply(A, 2, sum)
+row.sums <- apply(A, 1, sum)
+
+col.sums
+row.sums
+```
+
+Code for 1b- f
+
+```{r}
+# Find the index of rows whose totals are greater than 50.
+set.seed(75)
+A <- matrix(sample(10, size = 60, replace = TRUE), nrow = 6)
+A
+b <- paste(which(rowSums(A) > 50))
+b
+
+
+# Bind those rows in a new matrix (use rbind()).
+C <- rbind( A[1,], A[2, ], A[3, ], A[4, ])
+C
+
+# Which rows contain exactly two occurrences of the number seven?
+d <- which(rowSums(C == 7) == 2)
+d
+
+# Find the number of entries in each row which are greater than 4. You can use apply() function.
+number_of_rows <- apply(C > 4, 1,  sum)
+number_of_rows
+
+
+# Which rows contain exactly two occurrences of the number seven?
+d <- which(rowSums(C == 7) == 2)
+d
+
+```
+Question 2
+
+```{r}
+a <- 1:20
+j <- 1:5
+solution <- sum(a^4)/(3+j)
+sum(solution)
+
+```
+
+
+Question 3
+
+Russian Roulette is a game played with a revolver and a single bullet. Write an R script which simulates
+the game of Russian Roulette, returning “CLICK” 5 out of 6 times, and “BANG” 1 out of 6 times
+
+```{r}
+sample (c(" BANG ", " click ") , size =1 , prob =c(1/6 , 5/6) )
+```
+Question 4 
+
+```{r}
+# Question 4a
+M <- matrix(sample(c(1:10), 16, replace = TRUE), nrow = 4, byrow = TRUE)
+M
+
+max_value <- which(M == max(M), arr.ind=TRUE)
+max_value
+
+min_value <- which(M == min(M), arr.ind=TRUE)
+min_value
+
+# Question 4b
+
+#max_value2 <- apply(which(M[] == max(M), arr.ind=TRUE)) 
+#max_value2
+
+
+# Convert M to a list of column-vectors. Look at split()
+a <- split(M, rep(1:ncol(M), each = nrow(M)))
+
+print(a)
+
+```
+
+Section 4 "FUNCTIONS"
+
+Question 1 and 2 
+
+```{r}
+# Code 
+x <- c(1:10)
+
+fun1 <- function(fun1){
+  n <- length(x)
+  return(fun1^(1:n))
+}
+
+y <- fun1(x)
+y
+
+# Code 
+fun2 <- function(fun2){
+  n <- length(x)
+  return(fun2^(1:n)/(1:n))
+}
+z <- fun2(x)
+z
+
+# Try out 
+fun3 <- c(1:5,6:1)
+fun1 <- function(fun1){
+  n <- length(fun3)
+  return(fun3^(1:n))
+}
+
+b <- fun1(fun3)
+b
+
+
+```
+Question 3
+
+```{r}
+x <- c(1:10)
+
+fun5<- function(x)
+{
+ifelse(x < 0, x^2 + 2*x + 3, ifelse(x < 2, x+3, x^2 + 4*x - 7))
+}
+
+graph <- seq(-3:3)
+plot(graph, fun5(graph), type="l")
+```
+
+Question 4 
+
+```{r}
+X <-  matrix(c(1,1,3,5,2,6,-2,-1,-3), nrow = 3, byrow = TRUE)
+X
+
+fun6 <- function(X) {
+  ifelse(X %% 2 != 0, 2*X, X)
+}
+w <- fun6(X)
+w
+
+```
+
+Question 5
+
+```{r}
+set.seed(3)
+M <- matrix(sample(c(1:8), 16, replace = TRUE), nrow = 4, byrow = TRUE)
+M
+
+getmode <- function(v) {
+a <- table(v, v)
+b <- diag(a)
+return(as.numeric(names(which.max(b))))
+}
+getmode(M)
+
+
+# apply(getmode(M), 2,  sum)
+
+```
+
+
+Section 5 "Conditions"
+
+Question 1
+
+Take the sqrt() of the following vector by skipping (-) numbers. Use ifelse() first. It will give your
+some NAs. Now use if/else conditions openly to avoid these NAs
+
+```{r}
+set.seed(2)
+d <- sample(-10:10, 10, replace = TRUE)
+d
+
+# Take the sqrt() of the following vector by skipping (-) numbers. Use ifelse() first
+b <- ifelse(d > 0, sqrt(d), NA)
+b
+
+# Now use if/else conditions openly to avoid these NAs
+if(anyNA(b)){
+print(b[!is.na(b)])
+} else {
+print("No NA")
+}
+
+```
+Question 2 
+
+Now use the same vector, d, and apply sqrt() if the number is larger than or equal to 0, if not take
+the square of the number
+
+```{r}
+set.seed(2)
+d <- sample(-10:10, 10, replace = TRUE)
+d
+
+b <- ifelse(d >= 0, sqrt(d), d^2)
+b
+```
+Question 3.
+
+You have the following matrix. Create a code that prints how many numbers there are less than 6 in
+A[1,]. If there is no number less than 6 print “No number less than 6 in Row 1”. Make sure that you
+print only once! Hint use any() in the condition. Use if and else separately instead of ifelse().
+
+```{r}
+set.seed(1)
+A <- matrix(sample(1:10, 25, replace = TRUE), 5, 5)
+A
+
+# Create a code that prints how many numbers there are less than 6 in A[1,]
+a <- c((A[1, ]< 6))
+sum(a)
+
+ifelse(sum(c((A[1, ]< 6))), "Numbers less than 6 in Row 1", "No number less than 6 in Row 1" )
+
+```
+Section 6 "LOOPS"
+
+Question 1
+
+Create a loop that runs 100 times. In each run, it draws 1000 numbers from a standard normal
+distribution. It calculates the mean and the standard deviation of these 1000 numbers. Finally, it saves
+them to separate containers, one for means and one for standard deviations.
+
+```{r}
+x_mean <- c()
+x_sd <- c()
+
+for (i in 1:100) {
+  set.seed(i)
+  x <- rnorm(1000)
+  x_mean[i] <- mean(x)
+  x_sd[i] <- sd(x)
+}
+```
+
+Question 2
+
+The numerical or character variable could be an indicator variable. For example, if a numerical variable
+has less than a certain threshold (like 10 unique numbers), it might be considered an indicator variable.
+Write a code that looks each variable in mtcar (see datasets package) and identifies each indicator
+variable and convert it to a factor variable in a loop.
+
+
+```{r}
+str(mtcars)
+
+x_mpg <- c()
+x_cyl <- c()
+x_disp <- c()
+x_hp <- c()
+x_drat <- c()
+x_wt <- c()
+x_qsec <- c()
+x_vs <- c()
+x_am <- c()
+x_gear <- c()
+x_carb <- c()
+
+for (i in mtcars) {
+  set.seed(i)
+  mpg <- c(mtcars$mpg)
+  x_mpg <- as.factor(mpg)
+  
+}
+for (i in mtcars) {
+  set.seed(i)
+  cyl <- c(mtcars$cyl)
+  x_cyl <- as.factor(cyl)
+}
+for (i in mtcars) {
+  set.seed(i)
+  disp <- c(mtcars$disp)
+  x_disp <- factor(disp)
+}
+for (i in mtcars) {
+  set.seed(i)
+  hp <- c(mtcars$hp)
+  x_hp <- factor(hp)
+}
+for (i in mtcars) {
+  set.seed(i)
+  drat <- c(mtcars$drat)
+  x_drat <- factor(drat)
+}
+for (i in mtcars) {
+  set.seed(i)
+  wt <- c(mtcars$wt)
+  x_wt <- factor(wt)
+}
+for (i in mtcars) {
+  set.seed(i)
+  qsec <- c(mtcars$qsec)
+  x_qsec <- factor(qsec)
+}
+for (i in mtcars) {
+  set.seed(i)
+  vs <- c(mtcars$vs)
+  x_vs <- factor(vs)
+}
+for (i in mtcars) {
+  set.seed(i)
+  am <- c(mtcars$am)
+  x_am <- factor(am)
+}
+for (i in mtcars) {
+  set.seed(i)
+  gear <- c(mtcars$gear)
+  x_gear <- factor(gear)
+}
+for (i in mtcars) {
+  set.seed(i)
+  carb <- c(mtcars$carb)
+  x_carb <- factor(carb)
+}
+
+class(x_mpg)
+class(x_cyl)
+class(x_disp)
+class(x_hp)
+class(x_drat)
+class(x_wt)
+class(x_qsec)
+class(x_vs)
+class(x_am)
+class(x_gear)
+class(x_carb)
+
+```
+
+
+
+
+
+
+
