@@ -1,0 +1,232 @@
+---
+title: "Assignment 4"
+author: "Joseph Elue"
+date: "2023-02-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Loading the dataset
+library(MASS)
+library(ROCR)
+filepath <- "https://quantdev.ssri.psu.edu/sites/qdev/files/student-mat.csv"
+data <- read.table(file=url(filepath),sep=";",header=TRUE)
+str(data)
+```
+```{r}
+# Solve the Classification Problem
+# Calculate the 3rd quartile of G3
+q3 <- quantile(data$G3, 0.75)
+
+# Create the factor vector y
+data$y <- as.factor(ifelse(data$G3 > q3, 1, 0))
+
+```
+
+```{r}
+# Check for NA's
+anyNA(data)
+```
+```{r}
+# changing variables to numeric
+
+# This is converted because upon reviewing the data there were only two responses "GP" and "MS"
+data$school <- ifelse(data$school == 'GP',1,0)
+data$school <- as.numeric(data$school)
+
+# This is converted because upon reviewing the data there were only two responses "M" and "F"
+data$sex <- ifelse( data$sex == 'M',1,0)
+data$sex <- as.numeric(data$sex)
+
+# This is converted because upon reviewing the data there were only two responses "R" and "U"
+data$address <- ifelse( data$school == 'R',1,0)
+data$address <- as.numeric( data$address)
+
+# This is converted because upon reviewing the data there were only two responses "GT3" and "LE3"
+data$famsize <- ifelse( data$famsize == 'GT3',1,0)
+data$famsize <- as.numeric ( data$famsize)
+
+# This is converted because upon reviewing the data there were only two responses "T" and "A"
+data$Pstatus <- ifelse ( data$Pstatus == 'T',1, 0)
+data$Pstatus <- as.numeric( data$Pstatus)
+
+# This is converted because upon reviewing the data there were only two responses "T" and "A"
+data$guardian <- ifelse ( data$guardian == 'father',1, 0)
+data$guardian <- as.numeric( data$guardian)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$schoolsup <- ifelse( data$schoolsup == 'yes',1,0)
+data$schoolsup <- as.numeric(data$schoolsup)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$famsup <- ifelse( data$famsup == 'yes',1,0)
+data$famsup <- as.numeric(data$famsup)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$paid <- ifelse( data$paid == 'yes',1,0)
+data$paid <- as.numeric(data$paid)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$activities <- ifelse( data$activities == 'yes',1,0)
+data$activities <- as.numeric(data$activities)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$nursery <- ifelse( data$nursery == 'yes',1,0)
+data$nursery <- as.numeric(data$nursery)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$higher <- ifelse( data$higher == 'yes',1,0)
+data$higher <- as.numeric(data$higher)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$internet <- ifelse( data$internet == 'yes',1,0)
+data$internet <- as.numeric(data$internet)
+
+# This is converted because upon reviewing the data there were only two responses "Yes" and "No"
+data$romantic <- ifelse( data$romantic == 'yes',1,0)
+data$romantic <- as.numeric(data$romantic)
+
+# Covert the remaining variables appropriately
+for (i in 1:ncol(data)) {
+  if(is.character(data[,i])) data[,i] <- as.factor(data[,i])
+}
+
+
+str(data)
+```
+
+```{r}
+# Code to remove the G1, G2 and G3 variables and assign the data to another dataset name.
+data_2 <- data[, -c(31, 32, 33)]
+
+str(data_2)
+```
+
+
+```{r, warning=FALSE}
+# Perform the LPM
+library(ROCR)
+
+# Containers 
+AUC <- c()
+
+# No of loops
+t = 100 
+
+# Loop
+for (i in 1:t) {
+  shuffle <- sample(nrow(data_2), nrow(data_2), replace = FALSE)
+  
+  # No of splits
+  k <- 5
+  testind <- shuffle[1:(nrow(data_2)/k)]
+  trainind <- shuffle[-testind]
+  
+  # Split: Train and Test
+  trdf<- data_2[trainind, ] 
+  tsdf <- data_2[testind, ] 
+
+  #LPM
+  model1 <- lm(y ~ ., data = trdf, family = "gaussian")
+  phat <- predict(model1, tsdf)
+  
+  # ROC & AUC (from ROCR)
+  phat_df <- data.frame(phat, "Y" = tsdf$y)
+  pred_rocr <- prediction(phat_df[,1], phat_df[,2])
+ 
+  auc_ROCR <- performance(pred_rocr, measure = "auc")
+  AUC[i] <- auc_ROCR@y.values[[1]]
+}
+
+plot(AUC, col = "grey")
+abline(a=mean(AUC), b=0, col = "red")
+```
+```{r}
+# Mean AUC
+mean(AUC)
+
+sqrt(var(AUC))
+```
+```{r}
+# ROC 
+perf <- performance(pred_rocr,"tpr","fpr")
+plot(perf, colorize=TRUE)
+abline(a = 0, b = 1)
+```
+
+
+
+
+```{r}
+# KNN
+library(caret)
+sh <- sample(nrow(data_2), nrow(data_2), replace = FALSE)
+
+# No of Splits 
+h <- 10
+
+# First Split
+ind_test <- sh[1:(nrow(data_2)/h)]
+ind_data <- sh[-ind_test]
+
+# Second Split
+# Put 10% a side as a test set
+trdf <- data_2[ind_data, ]
+tsdf <- data_2[ind_test, ]
+
+# Grid Search
+k <- seq(from = 3, to = 50, by = 2)
+
+# Number of bootstrap loops 
+m <- 20 
+
+# Containers
+MAUC <- c()
+k_opt <- c()
+
+# Loop
+for(i in 1:length(k)){
+   AUC <- c()
+   for(l in 1:m){
+     bind <- sample(nrow(trdf), nrow(trdf), replace = TRUE)
+     uind <- unique(bind)
+     df_train <- data_2[uind, ]
+     df_val <- data_2[-uind, ]
+
+     model <- knn3(y ~., data = df_train, k = k[i])
+     phat <- predict(model, df_val, type = "prob")
+
+     #AUC
+     pred_rocr <- prediction(phat[,2], df_val$y)
+     auc_ROCR <- performance(pred_rocr, measure = "auc")
+     AUC[l] <- auc_ROCR@y.values[[1]]
+   }
+   MAUC[i] <- mean(AUC)
+ }
+```
+
+
+```{r}
+# Graph
+plot(k, MAUC, col = "red", type = "o")
+
+# AUC Plot
+perf <- performance(pred_rocr, "tpr", "fpr")
+plot(perf, colorize = TRUE, lwd = 2)
+abline(a = 0,  b = 1, col = "red")
+```
+
+```{r}
+MAUC[which.max(MAUC)]
+k[which.max(MAUC)]
+```
+
+
+
+
+
+
