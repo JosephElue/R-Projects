@@ -1,0 +1,318 @@
+---
+title: "Project 5"
+author: "Joseph Elue"
+date: "2023-03-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Loading the data
+```{r}
+library(PASWR)
+data(titanic3)
+str(titanic3)
+df <- titanic3
+```
+# Checking for NA's
+```{r, results = 'hide'}
+anyNA(df)
+
+# Code to see where NA's are
+is.na(df)
+
+# Taking a closer look at where the NA's are 
+sum(is.na(df$pclass))
+sum(is.na(df$survived))
+sum(is.na(df$name))
+sum(is.na(df$sex))
+sum(is.na(df$age))
+sum(is.na(df$sibsp))
+sum(is.na(df$parch))
+sum(is.na(df$ticket))
+sum(is.na(df$fare))
+sum(is.na(df$cabin))
+sum(is.na(df$embarked))
+sum(is.na(df$boat))
+sum(is.na(df$body))
+sum(is.na(df$home.dest))
+```
+# Using the code above, below are the columns that have NA's:
+  1. Age
+  2. Fare
+  3. Body
+
+# However after closer observation the following variables seem like they also have NA's 
+  1. Cabin 
+  2. Boat
+  3. Home.dest
+  
+  
+# Resolving the NA issue
+```{r}
+# Resoving the NA issue on the "age" variable by using the "mean" of all ages 
+df$age <- replace(df$age, is.na(df$age), mean(df$age, na.rm = TRUE))
+
+# Do the same for fare
+df$fare <- replace(df$fare, is.na(df$fare), mean(df$fare, na.rm = TRUE))
+
+# I would be removing the following variables because asides from their NA issues I do not believe the add to the efficiency of the model
+df <- df[, !(names(df) %in% c("name","cabin","embarked", "boat", "body","ticket", "home.dest"))]
+
+str(df)
+```
+# Re-checking that the NA issue has been resolved
+```{r}
+anyNA(df)
+```
+# Data Splitting
+```{r}
+ 
+ind <- sample(nrow(df), nrow(df)*0.70, replace = FALSE)
+model_data <- df[ind, ]
+test_data <- df[-ind, ]
+```
+
+# First Model LPM
+```{r}
+# Loading Packages
+library(ROCR)
+
+# Creating Containers
+MAUC <- c()
+AUC <- c()
+
+# Loops
+for(i in 1:500){
+  ind <- sample(nrow(model_data), nrow(model_data), replace = TRUE)
+  # Bootstrap
+  ind <- unique(ind)
+  lpm_train <- model_data[ind, ]
+  lpm_test <- model_data[-ind, ]
+
+  lpm_model <- lm(survived~., data = lpm_train)
+  lpm_phat <- predict(lpm_model, lpm_test)
+  lpm_phat[lpm_phat < 0] <- 0
+  lpm_phat[lpm_phat > 1] <- 1
+  
+  
+  #AUC
+  phat_df <- data.frame(lpm_phat, "Y" = lpm_test$survived)
+  pred_rocr <- prediction(phat_df[,1], phat_df[,2])
+  auc_ROCR <- performance(pred_rocr, measure = "auc")
+  AUC[i] <- auc_ROCR@y.values[[1]]
+}
+
+lpm_AUC <- mean(AUC)
+lpm_SD<- sd(AUC)
+
+lpm_AUC
+lpm_SD
+```
+# CART Model
+```{r}
+# Loading Packages
+library(rpart)
+
+# Containers
+cart_AUC <- c()
+
+
+# Loops 
+for (i in 1:500) {
+  ind <- sample(nrow(model_data), nrow(model_data), replace = TRUE)
+  # Bootstrap
+  ind <- unique(ind)
+  cart_train <- model_data[ind,]
+  cart_test <- model_data[-ind,]
+  
+  cart_model <- rpart(survived ~ ., data = cart_train, method = "class")
+  
+  cart_phat <- predict(cart_model, cart_test, type = "prob")
+  
+  pred_rocr <- prediction(cart_phat[,2], cart_test$survived)
+  auc_ROCR <- performance(pred_rocr, measure = "auc")
+  cart_AUC[i] <- auc_ROCR@y.values[[1]]
+  
+}
+cart_AUC_mean<- mean(cart_AUC)
+cart_SD <- sd(cart_AUC)
+
+cart_AUC_mean
+cart_SD
+```
+# Bagging Model
+```{r}
+B = 100
+
+# Containers
+bagging_AUC <- c()
+
+# Loop
+for (i in 1:500) {
+  ind <- sample(nrow(model_data), nrow(model_data), replace = TRUE)
+  # Bootstrapping
+  ind <- unique(ind)
+  bagging_train <- model_data[ind,]
+  bagging_test  <- model_data[-ind,]
+  
+  # Container
+  bagging_phat <- matrix(0, B, nrow(bagging_test)) 
+  
+  # Second Loop
+  for(j in 1:B) {
+    bagging_model <- rpart(survived ~ ., data =bagging_train , method = "class")
+    bagging_phat[j, ] <- predict(bagging_model, bagging_test, type = "prob")[, 2]
+    
+    phat_f <- colMeans(bagging_phat)
+    pred_rocr <- prediction(phat_f, bagging_test$survived)
+    auc_ROCR <- performance(pred_rocr, measure = "auc")
+    bagging_AUC[i] <- auc_ROCR@y.values[[1]]
+  }
+}
+bagging_MAUC <- mean(bagging_AUC)
+bagging_SD <- sd(bagging_AUC)
+bagging_MAUC
+bagging_SD 
+```
+After comparing the three models the LPM Model came out on top with the best results, having the highest AUC and the lowest Standard Deviation.
+
+However both the CART and Bagging AUC had similar results, but I would be using the bagging model on my test data because it had a lower standard deviation.
+
+Trying out the LPM Model on the Original Test Data
+```{r}
+# Loading Packages
+library(ROCR)
+
+# Creating Containers
+MAUC <- c()
+AUC <- c()
+
+# Loops
+for(i in 1:500){
+  ind <- sample(nrow(model_data), nrow(model_data), replace = TRUE)
+  # Boostrap
+  ind <- unique(ind)
+  final_train <- model_data[ind, ]
+  final_test <- model_data[-ind, ]
+
+  final_model <- lm(survived~., data = final_train)
+  
+  # Use the original test data from the first split
+  final_phat <- predict(final_model, test_data)
+  final_phat[final_phat < 0] <- 0
+  final_phat[final_phat > 1] <- 1
+  
+  
+  #AUC
+  phat_df <- data.frame(final_phat, "Y" = test_data$survived)
+  pred_rocr <- prediction(phat_df[,1], phat_df[,2])
+  auc_ROCR <- performance(pred_rocr, measure = "auc")
+  AUC[i] <- auc_ROCR@y.values[[1]]
+}
+# ROC 
+perf <- performance(pred_rocr,"tpr","fpr")
+plot(perf, colorize=TRUE)
+abline(a = 0, b = 1)
+
+final_AUC_mean <- mean(AUC)
+final_SD<- sd(AUC)
+
+final_AUC_mean
+final_SD
+```
+# Confusion Table
+```{r}
+# Using 0.5 as the threshold
+yhat <- ifelse(final_phat > 0.5, 1, 0)
+conf_table <- table(test_data$survived,yhat)
+conf_table
+```
+# Finding the Optimal threshold for the best split using LPM
+
+```{r}
+# Grid Search
+opt_t <- seq(0.1, 0.99, 0.01)
+
+# Containers
+max_t <- c()
+
+for(i in 1:300){
+  # Shuffle Data
+ ind <- sample(nrow(model_data), nrow(model_data), replace = TRUE)
+ # Bootstrapping
+        ind <- unique(ind)
+        train_data <- model_data[ind, ]
+        val_data <- model_data[-ind, ]
+        
+  # using the same LPM Model
+  model <- lm(survived~., data = train_data)
+  phat <- predict(model, newdata = val_data)
+  
+  # Container
+  ACC <- c()
+  # Loop to find the opt_t
+  for(j in 1:length(opt_t)){
+   yhat <- ifelse(phat > opt_t[j], 1, 0)
+   conf_table_2 <- table(val_data$survived, yhat)
+   
+   
+    ACC[j] <- sum(diag(conf_table_2)) / sum(conf_table_2) 
+  }
+  
+max_t[i] <- opt_t[which.max(ACC)]  
+}
+mean_t <- mean(max_t)
+mean_t
+```
+# Using the opt_T
+```{r}
+yhat <- ifelse(final_phat > mean_t, 1, 0)
+conf_table <- table(test_data$survived,yhat)
+conf_table
+```
+# Final Bagging Model because it had a better standard deviation than the CART model.
+```{r}
+# Bagging 
+B = 100
+
+# Containers
+final_bagging_AUC <- c()
+
+# Loop
+for (i in 1:500) {
+  ind <- sample(nrow(model_data), nrow(model_data), replace = TRUE)
+  # Bootstrapping
+  ind <- unique(ind)
+  final_bagging_train <- model_data[ind,]
+  final_bagging_test  <- model_data[-ind,]
+  
+  # Container
+  final_bagging_phat <- matrix(0, B, nrow(test_data)) 
+  
+  # Second Loop
+  for(j in 1:B) {
+    final_bagging_model <- rpart(survived ~ ., data =final_bagging_train , method = "class")
+    final_bagging_phat[j, ] <- predict(final_bagging_model, test_data, type = "prob")[, 2]
+    
+    final_phat_f <- colMeans(final_bagging_phat)
+    pred_rocr <- prediction(final_phat_f, test_data$survived)
+    auc_ROCR <- performance(pred_rocr, measure = "auc")
+    final_bagging_AUC[i] <- auc_ROCR@y.values[[1]]
+  }
+}
+# ROC 
+perf <- performance(pred_rocr,"tpr","fpr")
+plot(perf, colorize=TRUE)
+abline(a = 0, b = 1)
+
+final_bagging_MAUC <- mean(final_bagging_AUC)
+final_bagging_SD <- sd(final_bagging_AUC)
+final_bagging_MAUC
+final_bagging_SD 
+```
+# From the final results gotten from applying the bagging model to the test data we can see an improvement in both the AUC and Standard Deviation. 
+
+
